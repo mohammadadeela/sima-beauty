@@ -99,7 +99,11 @@ On your **Hostinger Ubuntu VPS** terminal (root/sudo access), paste:
 curl -fsSL https://raw.githubusercontent.com/mohammadadeela/sima-beauty/main/deploy/install-vps.sh | sudo bash
 ```
 
-The script installs isolated Node 22 (does not replace Lucerne Node), PostgreSQL, test data, a systemd service, and a dedicated Nginx IP site. It prints the store/admin HTTP links and a randomly generated admin password at the end; the login is also saved in `/root/sima-beauty-login.txt` (read with `sudo cat /root/sima-beauty-login.txt`). It only seeds an initially empty Sima database and safely reuses the existing database on later runs. Never run real transactions or use real customer information while testing over **HTTP**. Buy/connect a domain and configure **HTTPS** before going live for real customers. A Hostinger-managed firewall may need port 80 enabled in hPanel. To update later, run the same command again.
+**Shared-server safe mode:** This installer does **not** run `apt`, install/enable/restart PostgreSQL or Nginx, change firewalls, add a port-80 site, modify PM2, or change the system Node version. It checks that all prerequisites are already installed and that port **5001** is free; if not, it safely stops rather than interfering with existing sites. It creates only Sima-owned resources (app directory, isolated Node 22 runtime, system user/service, one PostgreSQL role and one empty database). It does use CPU/RAM/disk and a listening port, so zero impact on shared server resources cannot be guaranteed.
+
+**URL:** `http://YOUR_VPS_IP:5001` and admin `http://YOUR_VPS_IP:5001/admin`. The script prints the real URLs and a random admin password, also saved in `/root/sima-beauty-login.txt` (`sudo cat /root/sima-beauty-login.txt`). If Hostinger's firewall blocks TCP 5001, open that port in hPanel yourself. The installer does **not** alter any firewall rules. This is plain HTTP for dummy testing; never enter real customer details or use real payments until you have a domain and HTTPS. Run the same command again to update **only** the managed Sima installation. If any resource already exists without Sima's management marker, the script refuses to replace or take it over.
+
+**Note:** An existing PostgreSQL server, Git, curl, tar, openssl and the other prerequisites must already be available. The script refuses to install system packages because package upgrades can affect other websites. For a new, empty VPS, prerequisite installation is a separate administrative decision.
 
 ### 1. Upload the code
 
