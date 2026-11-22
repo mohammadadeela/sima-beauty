@@ -162,7 +162,7 @@ export function Accordion({ title, children, defaultOpen }: { title: ReactNode; 
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-            <div className="whitespace-pre-line pb-5 text-[14.5px] leading-relaxed text-ink-soft">{children}</div>
+            <div dir="auto" className="whitespace-pre-line pb-5 text-[14.5px] leading-relaxed text-ink-soft">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -176,7 +176,7 @@ export function Spinner({ className }: { className?: string }) {
 
 export function Empty({ title, text, children }: { title: string; text?: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-blob bg-blush-soft px-6 py-14 text-center">
+    <div className="flex flex-col items-center rounded-blob bg-blush-soft px-6 py-14 !text-center">
       <h3 className="text-2xl font-semibold">{title}</h3>
       {text && <p className="mt-2 max-w-sm text-[15px] text-ink-soft">{text}</p>}
       {children && <div className="mt-6">{children}</div>}

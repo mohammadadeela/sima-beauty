@@ -50,6 +50,15 @@ export default function StoreSettings() {
           </div>
         </Card>
 
+        <Card title="Google and link previews (SEO)" hint="What people see when the store shows up on Google or when a link is shared on WhatsApp or Instagram." className="xl:col-span-2">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Field label="Page title on Google" hint="Up to about 60 characters. Put the main search words first."><input className="field" value={s.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} /></Field>
+            <Field label="Search words" hint="Words customers type into Google, separated by commas."><input className="field" value={s.seoKeywords} onChange={(e) => set("seoKeywords", e.target.value)} /></Field>
+            <Field label="Description under the title" hint="One or two sentences, up to about 160 characters." className="lg:col-span-2"><textarea className="field" value={s.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} /></Field>
+            <Field label="Google Search Console code" hint='In Search Console choose "HTML tag" and paste only the code inside content="…".' className="lg:col-span-2"><input className="field" value={s.googleVerification} onChange={(e) => set("googleVerification", e.target.value.trim())} /></Field>
+          </div>
+        </Card>
+
         <Card title="Delivery policy" hint="One point per line. Shown on the Delivery and exchange page."><ListEditor multiline items={s.shippingPolicy} onChange={(v) => set("shippingPolicy", v)} addLabel="Add point" /></Card>
         <Card title="Return and exchange policy" hint="Also shown on every product page.">
           <ListEditor multiline items={s.exchangePolicy} onChange={(v) => set("exchangePolicy", v)} addLabel="Add point" />
@@ -70,7 +79,6 @@ export default function StoreSettings() {
           </div>
         </Card>
 
-        <Card title="About us"><textarea className="field min-h-[150px]" value={s.about} onChange={(e) => set("about", e.target.value)} /></Card>
         <Card title="Privacy policy"><ListEditor multiline items={s.privacyPolicy} onChange={(v) => set("privacyPolicy", v)} addLabel="Add point" /></Card>
         <Card title="Terms" className="xl:col-span-2"><ListEditor multiline items={s.terms} onChange={(v) => set("terms", v)} addLabel="Add point" /></Card>
       </div>

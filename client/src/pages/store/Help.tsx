@@ -9,16 +9,15 @@ import { cx, money, whatsappLink } from "@/lib/format";
 import { useSettings } from "@/lib/queries";
 import { toast } from "@/lib/store";
 
-const TABS = [
-  ["delivery", "Delivery and exchange"], ["faq", "Questions"], ["contact", "Contact us"],
-  ["about", "About us"], ["privacy", "Privacy"], ["terms", "Terms"],
-] as const;
+const TABS = [["delivery", "Delivery and exchange"], ["faq", "Questions"], ["contact", "Contact us"], ["policies", "Privacy and terms"]] as const;
+// old links keep working
+const ALIAS: Record<string, string> = { privacy: "policies", terms: "policies", about: "contact" };
 
 /** One page for all the store information, switched by tabs. */
 export default function Help() {
   const { tab = "delivery" } = useParams<{ tab?: string }>();
   const settings = useSettings();
-  const current = TABS.find(([id]) => id === tab) || TABS[0];
+  const current = TABS.find(([id]) => id === (ALIAS[tab] || tab)) || TABS[0];
   usePageTitle(current[1]);
   if (!settings) return null;
 
@@ -36,9 +35,7 @@ export default function Help() {
         {current[0] === "delivery" && <Delivery s={settings} />}
         {current[0] === "faq" && <div className="rounded-blob bg-white px-5 shadow-soft sm:px-7">{settings.faqs.map((f, i) => <Accordion key={i} title={f.q} defaultOpen={i === 0}>{f.a}</Accordion>)}</div>}
         {current[0] === "contact" && <Contact s={settings} />}
-        {current[0] === "about" && <p className="whitespace-pre-line rounded-blob bg-white p-6 text-[16px] leading-relaxed text-ink-soft shadow-soft sm:p-8">{settings.about}</p>}
-        {current[0] === "privacy" && <Lines items={settings.privacyPolicy} />}
-        {current[0] === "terms" && <Lines items={settings.terms} />}
+        {current[0] === "policies" && <div className="grid gap-5"><Lines title="Privacy" items={settings.privacyPolicy} /><Lines title="Terms" items={settings.terms} /></div>}
       </div>
     </div>
   );

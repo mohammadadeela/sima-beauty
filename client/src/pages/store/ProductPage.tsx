@@ -92,7 +92,7 @@ function Details({ product, reviews, related }: { product: Product; reviews: Rev
         {/* Gallery */}
         <div className="lg:sticky lg:top-24 lg:self-start">
           <motion.div key={mainPhoto || shade?.hex} initial={{ opacity: 0.4, scale: 0.985 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.35 }} className="relative">
-            <ProductVisual image={mainPhoto} art={product.art} color={shade?.hex || undefined} className="aspect-square w-full rounded-blob sm:aspect-[5/4] lg:aspect-square" artClass="animate-floaty !h-[72%]" />
+            <ProductVisual image={mainPhoto} art={product.art} color={shade?.hex || undefined} className="aspect-square w-full rounded-blob sm:aspect-[5/4] lg:aspect-square" artClass="animate-floaty !h-[78%]" />
             <div className="absolute left-4 top-4 flex gap-1.5">
               {onSale(product) && <span className="tag bg-pink text-white">Sale</span>}
               {product.isNew && <span className="tag bg-ink text-milk">New</span>}

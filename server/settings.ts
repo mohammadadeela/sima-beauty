@@ -10,6 +10,12 @@ export const DEFAULT_SETTINGS: Settings = {
   storeName: "Sima Beauty",
   currency: "₪",
 
+  // Search engines (Google) and link previews (WhatsApp, Instagram, Facebook)
+  seoTitle: "Sima Beauty | Original makeup from the brands you love",
+  seoDescription: "Shop 100% original makeup at Sima Beauty: lipstick, mascara, foundation, blush and more from top brands. Delivered to your door, pay cash on delivery.",
+  seoKeywords: "makeup, original makeup, lipstick, mascara, foundation, blush, nail polish, makeup store, Sima Beauty",
+  googleVerification: "",
+
   announcementOn: true,
   announcements: [
     "Free delivery on orders over ₪300",
@@ -19,8 +25,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
   heroTitle: "Wear your shade.",
   heroText: "Original makeup from the brands you love, delivered to your door.",
-  heroCta: "Shop lips",
-  heroLink: "/shop?category=lips",
+  heroCta: "Shop now",
+  heroLink: "/shop",
   heroShades: [
     { name: "Pink Pop", hex: "#EC5C93" },
     { name: "Cherry Bomb", hex: "#C2183F" },
@@ -76,7 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
   facebook: "",
   tiktok: "",
 
-  about: "Sima Beauty brings original makeup from trusted brands to your door. Every product is sourced from authorised distributors, checked before it ships, and packed with care.",
+  about: "",
   shippingPolicy: [
     "We deliver to all areas of the West Bank, Jerusalem and the Interior.",
     "Delivery cost is calculated at checkout based on your area.",
@@ -130,6 +136,7 @@ const image = z.string().max(300).refine((v) => v === "" || v.startsWith("/uploa
 /** The exact shape every setting must have. Anything else is rejected. */
 const settingsSchema = z.object({
   storeName: text(60).min(1), currency: text(4).min(1),
+  seoTitle: text(90), seoDescription: text(320), seoKeywords: text(400), googleVerification: text(120).regex(/^[\w-]*$/, "Paste only the code, not the whole tag"),
   announcementOn: z.boolean(), announcements: z.array(text(140)).max(8),
   heroTitle: text(80), heroText: text(220), heroCta: text(40), heroLink: link,
   heroShades: z.array(z.object({ name: text(40), hex })).min(1).max(8),

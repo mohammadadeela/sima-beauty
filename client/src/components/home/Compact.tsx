@@ -1,85 +1,112 @@
-import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
-import { Logo } from "@/components/brand/Logo";
-import { cx, isLight } from "@/lib/format";
+import { useEffect, useRef } from "react";
+import { apply, chain, GOLD, hex, invert, lacquer, mul, perspective, rotX, rotY, rotZ, scale, translate } from "@/components/three/engine";
+import { COMPACT, lidAt, MIRROR, PAN, POWDER } from "@/components/three/models";
+import { useScene } from "@/components/three/useScene";
+import { cx } from "@/lib/format";
 
 export interface CompactShade { id: string; name: string; hex: string }
 
+const SHELL = lacquer("#E8257D");
+const easeOutBack = (t: number) => { const x = Math.min(Math.max(t, 0), 1) - 1; return 1 + 2.2 * x * x * x + 1.2 * x * x; };
+
 /**
- * A powder compact that opens when it scrolls into view. The lid swings up
- * to show its mirror, and the pan underneath is split into colour wedges
- * the shopper can tap. Built with CSS 3D transforms only.
+ * A real 3D powder compact. It opens when it scrolls into view, the mirror
+ * reflects the powder below, and each wedge of pressed powder can be tapped
+ * to choose a colour.
  */
 export function Compact({ shades, active, onPick }: { shades: CompactShade[]; active: string; onPick: (id: string) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const open = useInView(ref, { once: true, amount: 0.5 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const state = useRef({ shades, active, onPick });
+  useEffect(() => { state.current = { shades, active, onPick }; });
   const current = shades.find((s) => s.id === active) || shades[0];
-  const step = 360 / shades.length;
 
-  // A pie slice as a clip-path, for the wedge that starts at `from` degrees.
-  const slice = (from: number) => {
-    const pts = ["50% 50%"];
-    for (let a = from; a <= from + step + 0.01; a += step / 6) {
-      const r = (a - 90) * (Math.PI / 180);
-      pts.push(`${50 + 50 * Math.cos(r)}% ${50 + 50 * Math.sin(r)}%`);
-    }
-    return `polygon(${pts.join(",")})`;
-  };
+  const failed = useScene(canvasRef, (r, canvas) => {
+    const count = state.current.shades.length;
+    const ids = { base: r.add(COMPACT.base), rim: r.add(COMPACT.rim), knob: r.add(COMPACT.knob), lid: r.add(COMPACT.lid), lidRim: r.add(COMPACT.lidRim), mirror: r.add(COMPACT.mirror), hinge: r.add(COMPACT.hinge) };
+    const wedges = COMPACT.wedges(count).map((m) => r.add(m));
+    const lift = new Array(count).fill(0);
+    let mirrorColor = hex(state.current.shades[0].hex);
+    let hovered = -1, mvp = perspective(1, 1, 1, 10), size = { w: 1, h: 1 };
+
+    /** Which wedge (if any) is under this point of the canvas? */
+    const wedgeAt = (clientX: number, clientY: number): number => {
+      const rect = canvas.getBoundingClientRect();
+      const nx = ((clientX - rect.left) / rect.width) * 2 - 1, ny = 1 - ((clientY - rect.top) / rect.height) * 2;
+      const inv = invert(mvp);
+      if (!inv) return -1;
+      const a = apply(inv, nx, ny, -1), b = apply(inv, nx, ny, 1);
+      const p0 = [a[0] / a[3], a[1] / a[3], a[2] / a[3]], p1 = [b[0] / b[3], b[1] / b[3], b[2] / b[3]];
+      const top = PAN.floor + PAN.height;
+      const k = (top - p0[1]) / (p1[1] - p0[1]);
+      const x = p0[0] + (p1[0] - p0[0]) * k, z = p0[2] + (p1[2] - p0[2]) * k;
+      const rad = Math.hypot(x, z);
+      if (rad < PAN.r0 || rad > PAN.r1 + 0.03) return -1;
+      const ang = (Math.atan2(z, x) + Math.PI * 2) % (Math.PI * 2);
+      return Math.floor(ang / ((Math.PI * 2) / count));
+    };
+    const click = (e: MouseEvent) => { const i = wedgeAt(e.clientX, e.clientY); if (i >= 0) state.current.onPick(state.current.shades[i].id); };
+    const move = (e: PointerEvent) => { hovered = wedgeAt(e.clientX, e.clientY); canvas.style.cursor = hovered >= 0 ? "pointer" : "default"; };
+    const leave = () => { hovered = -1; };
+    canvas.addEventListener("click", click); canvas.addEventListener("pointermove", move); canvas.addEventListener("pointerleave", leave);
+
+    return {
+      frame({ t, dt, w, h, reduced }) {
+        size = { w, h };
+        const { shades: list, active: on } = state.current;
+        const open = (reduced ? 1 : easeOutBack((t - 0.35) / 1.5)) * 1.78;
+        const proj = perspective((30 * Math.PI) / 180, w / h, 1, 40);
+        r.begin(proj, [0.62, 0.3, 0.45]);
+        const sway = reduced ? 0 : Math.sin(t * 0.7) * 0.05;
+        const body = chain(translate(0, -0.95, -6.7), rotX(0.7), rotY(sway), scale(1.0));
+        mvp = mul(proj, body);
+
+        r.draw(ids.base, body, SHELL);
+        r.draw(ids.rim, body, GOLD);
+        r.draw(ids.knob, body, GOLD);
+        r.draw(ids.hinge, chain(body, translate(0, 0.0, -1.0), rotZ(Math.PI / 2)), GOLD);
+        list.forEach((s, i) => {
+          const goal = s.id === on ? 0.05 : i === hovered ? 0.025 : 0;
+          lift[i] += (goal - lift[i]) * Math.min(dt * 10, 1);
+          r.draw(wedges[i], mul(body, translate(0, PAN.floor + lift[i], 0)), POWDER(hex(s.hex)));
+        });
+
+        const target = hex((list.find((s) => s.id === on) || list[0]).hex);
+        mirrorColor = mirrorColor.map((v, i) => v + (target[i] - v) * Math.min(dt * 6, 1)) as [number, number, number];
+        const lid = mul(body, lidAt(open));
+        r.draw(ids.lid, lid, SHELL);
+        r.draw(ids.lidRim, lid, GOLD);
+        r.draw(ids.mirror, lid, MIRROR, 0, mirrorColor);
+
+        // keep the name label glued to the middle of the mirror
+        if (labelRef.current) {
+          const c = apply(mul(proj, lid), 0, 0.018, 0);
+          const x = (c[0] / c[3] * 0.5 + 0.5) * size.w, y = (1 - (c[1] / c[3] * 0.5 + 0.5)) * size.h;
+          labelRef.current.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+          labelRef.current.style.opacity = String(Math.min(Math.max((open - 1.4) * 4, 0), 1));
+        }
+      },
+      dispose() { canvas.removeEventListener("click", click); canvas.removeEventListener("pointermove", move); canvas.removeEventListener("pointerleave", leave); },
+    };
+  });
 
   return (
-    <div ref={ref} className="relative mx-auto mt-16 h-[330px] w-[280px] select-none sm:mt-24 sm:h-[420px] sm:w-[360px]" style={{ perspective: 1100 }}>
-      <div className="absolute bottom-0 left-0 aspect-square w-full" style={{ transformStyle: "preserve-3d", transform: "translateY(20%) rotateX(58deg)" }}>
-        {/* soft shadow on the table */}
-        <div className="absolute inset-[4%] rounded-full bg-pink-deep/40 blur-2xl" style={{ transform: "translateZ(-30px) translateY(8%)" }} />
-
-        {/* base */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gold-light via-gold to-gold-deep shadow-[0_0_0_1px_rgba(0,0,0,.08)]" style={{ transformStyle: "preserve-3d" }}>
-          <div className="absolute inset-[7%] rounded-full bg-pink-deep shadow-[inset_0_6px_14px_rgba(0,0,0,.35)]" />
-          {/* the pan of pressed powder */}
-          <div className="absolute inset-[11%]" style={{ transformStyle: "preserve-3d" }}>
-            {shades.map((s, i) => (
-              <motion.button
-                key={s.id} type="button" onClick={() => onPick(s.id)} aria-label={`${s.name} shades`} aria-pressed={s.id === active}
-                className="absolute inset-0 cursor-pointer rounded-full outline-none"
-                style={{ clipPath: slice(i * step), background: `radial-gradient(circle at 40% 30%, color-mix(in oklab, ${s.hex} 80%, white), ${s.hex} 55%, color-mix(in oklab, ${s.hex} 75%, black))` }}
-                animate={{ z: s.id === active ? 26 : 0, scale: s.id === active ? 1.04 : 1 }}
-                whileHover={{ z: 16 }}
-                transition={{ type: "spring", stiffness: 300, damping: 18 }}
-              />
-            ))}
-            <div className="pointer-events-none absolute inset-[39%] rounded-full bg-gradient-to-br from-gold-light to-gold-deep shadow-md" style={{ transform: "translateZ(30px)" }} />
-          </div>
+    <div className="mx-auto w-full max-w-[420px] select-none">
+    <div className="relative aspect-[10/11] w-full">
+      <div className="absolute bottom-[6%] left-1/2 h-[10%] w-[70%] -translate-x-1/2 rounded-[50%] bg-black/50 blur-2xl" aria-hidden />
+      {!failed && <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" role="img" aria-label="Powder compact with colour wedges" />}
+      {!failed && (
+        <div ref={labelRef} className="pointer-events-none absolute left-0 top-0 text-center opacity-0" aria-hidden>
+          <p key={current.id} className="animate-pop font-display text-[1.7rem] font-semibold italic leading-none text-ink sm:text-[2.1rem]">{current.name}</p>
         </div>
-
-        {/* hinge */}
-        <div className="absolute left-1/2 top-0 h-[5%] w-[26%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold-deep" />
-
-        {/* lid: swings up around its back edge */}
-        <motion.div
-          className="absolute inset-0"
-          style={{ transformStyle: "preserve-3d", transformOrigin: "50% 0%" }}
-          initial={{ rotateX: 0 }}
-          animate={{ rotateX: open ? 108 : 0 }}
-          transition={{ type: "spring", stiffness: 60, damping: 11, delay: 0.15 }}
-        >
-          {/* outside of the lid */}
-          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-glow via-pink to-pink-deep" style={{ backfaceVisibility: "hidden" }}>
-            <Logo tone="light" tagline={false} className="text-[3.2rem]" />
-          </div>
-          {/* inside of the lid: the mirror */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gold-light via-gold to-gold-deep" style={{ transform: "rotateX(180deg)", backfaceVisibility: "hidden" }}>
-            <div className="absolute inset-[7%] overflow-hidden rounded-full bg-gradient-to-br from-white via-[#FFE3EE] to-[#F7BBD3] shadow-[inset_0_0_30px_rgba(179,18,92,.25)]">
-              <div className="mirror-sheen absolute -inset-y-1/4 left-1/4 w-1/3 bg-gradient-to-r from-transparent via-white/90 to-transparent" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <motion.span key={current.id} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 16 }}
-                  className="flex h-[38%] w-[38%] items-center justify-center rounded-full shadow-lift" style={{ background: current.hex }}>
-                  <span className={cx("font-display text-xl font-semibold italic sm:text-2xl", isLight(current.hex) ? "text-ink" : "text-white")}>{current.name}</span>
-                </motion.span>
-                <span className="mt-2 text-[12px] font-semibold text-pink-deep sm:text-[13px]">Tap a colour below</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+      )}
+    </div>
+      {/* The same choice as plain buttons: for keyboards, screen readers, and devices without 3D. */}
+      <div className="mt-1 flex flex-wrap justify-center gap-2.5">
+        {shades.map((s) => (
+          <button key={s.id} onClick={() => onPick(s.id)} aria-label={`${s.name} shades`} aria-pressed={s.id === active} title={s.name}
+            className={cx("rounded-full border-2 transition-transform hover:scale-110", failed ? "h-14 w-14" : "h-7 w-7", s.id === active ? "scale-110 border-white" : "border-white/30")} style={{ background: s.hex }} />
+        ))}
       </div>
     </div>
   );

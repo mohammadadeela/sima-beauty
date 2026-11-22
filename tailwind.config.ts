@@ -14,8 +14,8 @@ export default {
         gold: { DEFAULT: "#C9A56B", light: "#EBD3A6", deep: "#9C7A44" },
       },
       fontFamily: {
-        display: ['"Bodoni Moda"', "Didot", '"Bodoni MT"', "Georgia", "serif"],
-        sans: ["Figtree", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        display: ['"Bodoni Moda"', "Tajawal", "Didot", '"Bodoni MT"', "Georgia", "serif"],
+        sans: ["Figtree", "Tajawal", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
       },
       borderRadius: { blob: "2rem" },
       boxShadow: {

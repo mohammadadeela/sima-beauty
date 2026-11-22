@@ -81,7 +81,7 @@
   transition: --shade 0.7s ease;
   background-color: #4A0D33;
   background-image:
-    radial-gradient(52% 62% at 70% 46%, color-mix(in oklab, var(--shade) 78%, white) 0%, var(--shade) 30%, color-mix(in oklab, var(--shade) 34%, #4A0D33) 62%, #4A0D33 100%);
+    radial-gradient(46% 70% at 74% 50%, color-mix(in oklab, var(--shade) 78%, white) 0%, var(--shade) 30%, color-mix(in oklab, var(--shade) 34%, #4A0D33) 62%, #4A0D33 100%);
 }
 @media (max-width: 1023px) {
   .hero-stage {
@@ -120,3 +120,15 @@
 /* ── Mirror sheen inside the powder compact ── */
 @keyframes sheen { 0%, 100% { transform: translateX(-60%) rotate(18deg); } 50% { transform: translateX(60%) rotate(18deg); } }
 .mirror-sheen { animation: sheen 5s ease-in-out infinite; }
+
+/* ── Arabic and English side by side ──
+   Every block of text works out its own direction from its first letter, so
+   Arabic lines read right-to-left and English lines left-to-right without
+   any extra markup. */
+p, li, label, h1, h2, h3, h4, dt, dd, td, th, summary, input, textarea, button, a, span.label { unicode-bidi: plaintext; }
+/* Alignment follows the section, not each line: left in the English-led parts of the store, right in the Arabic-led ones. */
+body { text-align: left; }
+[dir="rtl"] { text-align: right; }
+[dir="ltr"] { text-align: left; }
+[dir="rtl"] .btn > svg:last-child, [dir="rtl"] :is(.btn-pink, .btn-ink, .btn-light, .btn-line) > svg:last-child { transform: scaleX(-1); }
+[dir="rtl"] :is(.btn, .btn-pink, .btn-ink, .btn-light, .btn-line):hover > svg:last-child { transform: scaleX(-1) translateX(4px); }

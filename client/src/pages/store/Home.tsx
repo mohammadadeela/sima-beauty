@@ -93,77 +93,55 @@ function SectionHead({ title, href, action }: { title: string; href: string; act
 // ───────────────────────────── Hero ─────────────────────────────
 
 function Hero({ settings, brands }: { settings: Settings; brands: string[] }) {
-  const shades = settings.heroShades.length ? settings.heroShades : [{ name: "Cherry", hex: "#C2183F" }];
+  const shades = settings.heroShades.length ? settings.heroShades : [{ name: "Pink", hex: "#EC5C93" }];
   const [active, setActive] = useState(0);
   const shade = shades[active % shades.length];
   const words = settings.heroTitle.split(" ");
 
   return (
     <section className="hero-stage relative -mt-16 overflow-hidden text-milk lg:-mt-[72px]" style={{ ["--shade" as any]: shade.hex }}>
-      {/* the shade name, huge, drifting behind the lipstick */}
-      <div className="pointer-events-none absolute inset-x-0 top-[24%] select-none lg:top-[20%]" aria-hidden>
-        <AnimatePresence mode="wait">
-          <motion.div key={shade.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-            <Marquee speed={46}>
-              <span className="ghost-type whitespace-nowrap pr-[6vw] font-display text-[30vw] font-bold italic leading-none lg:text-[19vw]">{shade.name}</span>
-            </Marquee>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      <div className="wrap relative grid min-h-[calc(100svh-36px)] grid-rows-[auto_1fr_auto] pt-20 lg:max-h-[900px] lg:grid-cols-[1.05fr_1fr] lg:grid-rows-1 lg:items-center lg:pt-[72px]">
-        <div className="relative z-10 pt-3 lg:pb-24 lg:pt-0">
-          <h1 className="font-display text-[3.4rem] font-semibold italic leading-[0.92] sm:text-[5rem] lg:text-[clamp(4.5rem,8vw,7.6rem)]">
+      <div className="wrap relative grid items-center pb-20 pt-24 lg:min-h-[620px] lg:grid-cols-[1.05fr_0.95fr] lg:pb-24 lg:pt-28">
+        <div className="relative z-10">
+          <h1 className="font-display text-[2.9rem] font-semibold italic leading-[0.98] sm:text-[3.8rem] lg:text-[clamp(3.6rem,5.2vw,5.2rem)]">
             {words.map((w, i) => (
-              <span key={i} className="inline-block overflow-hidden pb-[0.12em] align-bottom">
-                <motion.span className="inline-block pr-[0.22em]"
-                  initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ duration: 0.9, delay: 0.15 + i * 0.12, ease: [0.2, 0.8, 0.2, 1] }}>
-                  {w}
-                </motion.span>
+              <span key={i} className="inline-block overflow-hidden pb-[0.14em] align-bottom">
+                <motion.span className="inline-block pr-[0.22em]" initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ duration: 0.9, delay: 0.15 + i * 0.12, ease: [0.2, 0.8, 0.2, 1] }}>{w}</motion.span>
               </span>
             ))}
           </h1>
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.7 }}>
-            <p className="mt-4 max-w-md text-[16px] leading-relaxed text-milk/80 sm:text-[18px]">{settings.heroText}</p>
-            <div className="mt-6 hidden flex-wrap gap-3 lg:flex">
-              <Link href={settings.heroLink || "/shop"} className="btn-light">{settings.heroCta}<ArrowRight size={18} /></Link>
-              {settings.shadeMatchOn && <a href="#shade-match" className="btn border border-milk/40 text-milk hover:bg-milk hover:text-ink">Find my shade</a>}
+            <p className="mt-3 max-w-md text-[16px] leading-relaxed text-milk/90 sm:text-[17.5px]" dir="auto">{settings.heroText}</p>
+
+            {/* shade picker */}
+            <div className="mt-6 inline-block rounded-3xl bg-black/20 p-3 pr-4 backdrop-blur-md">
+              <p className="px-1 text-[13px] text-milk/85">Try a shade on the lipstick: <span className="font-semibold text-white">{shade.name}</span></p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {shades.map((s, i) => (
+                  <button key={s.name + i} onClick={() => setActive(i)} aria-label={`Shade ${s.name}`} aria-pressed={i === active}
+                    className={cx("h-10 w-10 rounded-full border-2 transition-transform duration-300 hover:scale-110", i === active ? "scale-110 border-white shadow-[0_0_0_3px_rgba(255,255,255,.3)]" : "border-white/50")}
+                    style={{ background: s.hex }} />
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href={settings.heroLink || "/shop"} className="btn-light min-w-[150px] shadow-lift">{settings.heroCta}<ArrowRight size={18} /></Link>
+              {settings.shadeMatchOn && <a href="#shade-match" className="btn min-w-[150px] border-2 border-white/90 bg-ink/55 text-white backdrop-blur-md hover:bg-white hover:text-ink">Find my shade</a>}
             </div>
           </motion.div>
         </div>
 
-        {/* 3D lipstick */}
-        <div className="relative min-h-[40svh] lg:absolute lg:inset-y-0 lg:right-0 lg:min-h-0 lg:w-[58%]">
-          <div className="absolute bottom-[7%] left-1/2 h-10 w-[46%] -translate-x-1/2 rounded-[50%] bg-black/40 blur-2xl" aria-hidden />
+        {/* the 3D lipstick */}
+        <div className="relative mt-4 h-[42svh] min-h-[280px] lg:mt-0 lg:h-[500px]">
+          <div className="absolute bottom-[5%] left-1/2 h-10 w-[42%] -translate-x-1/2 rounded-[50%] bg-black/45 blur-2xl" aria-hidden />
           <Lipstick3D color={shade.hex} className="absolute inset-0 h-full w-full" />
         </div>
-
-        {/* shade picker */}
-        <motion.div className="relative z-10 pb-20 lg:absolute lg:bottom-24 lg:left-8 lg:pb-0" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 1 }}>
-          <p className="text-[13px] text-milk/70">
-            Pick a shade, drag to spin.{" "}
-            <span className="font-semibold text-milk">{shade.name}</span>
-          </p>
-          <div className="mt-2.5 flex flex-wrap gap-2.5">
-            {shades.map((s, i) => (
-              <button
-                key={s.name + i} onClick={() => setActive(i)} aria-label={`Shade ${s.name}`} aria-pressed={i === active}
-                className={cx("h-11 w-11 rounded-full border-2 transition-transform duration-300 hover:scale-110", i === active ? "scale-110 border-milk shadow-[0_0_0_4px_rgba(255,248,247,.25)]" : "border-milk/40")}
-                style={{ background: s.hex }}
-              />
-            ))}
-          </div>
-          <div className="mt-5 flex gap-3 lg:hidden">
-            <Link href={settings.heroLink || "/shop"} className="btn-light flex-1">{settings.heroCta}<ArrowRight size={18} /></Link>
-            {settings.shadeMatchOn && <a href="#shade-match" className="btn flex-1 border border-milk/40 px-4 text-milk">Find my shade</a>}
-          </div>
-        </motion.div>
       </div>
 
       {brands.length > 0 && (
-        <Marquee speed={40} className="absolute inset-x-0 bottom-0 border-t border-milk/15 bg-ink/40 py-3.5 backdrop-blur-md">
+        <Marquee speed={40} className="absolute inset-x-0 bottom-0 border-t border-milk/15 bg-black/25 py-3 backdrop-blur-md">
           {brands.map((b) => (
-            <span key={b} className="flex items-center gap-10 pr-10 font-display text-xl italic text-milk/90">{b}<span className="h-1.5 w-1.5 rotate-45 bg-gold-light" /></span>
+            <span key={b} className="flex items-center gap-10 pr-10 font-display text-lg italic text-milk/90">{b}<span className="h-1.5 w-1.5 rotate-45 bg-gold-light" /></span>
           ))}
         </Marquee>
       )}
@@ -238,7 +216,7 @@ function ShadeMatch() {
       <div className="wrap grid items-center gap-8 lg:grid-cols-[400px_1fr] lg:gap-12">
         <div className="text-center lg:text-left">
           <h2 className="text-[2.6rem] font-semibold italic leading-none sm:text-[3.6rem]">Find your shade</h2>
-          <p className="mt-3 text-[15.5px] text-milk/70">Open the compact and tap the colour you feel like wearing today.</p>
+          <p className="mt-3 text-[15.5px] text-milk/75">The compact opens for you. Tap the colour you feel like wearing today.</p>
           <div className="mt-2"><Compact shades={FAMILIES} active={family} onPick={setFamily} /></div>
         </div>
         <div>
@@ -290,7 +268,7 @@ function BannerCard({ banner, flip }: { banner: Banner; flip: boolean }) {
         )}
         <div className={cx("relative max-w-[62%]", banner.image && "text-white")}>
           <h3 className="text-[2rem] font-semibold leading-[0.98] sm:text-[2.9rem]">{banner.title}</h3>
-          {banner.text && <p className="mt-2 text-[14.5px] opacity-80">{banner.text}</p>}
+          {banner.text && <p className="mt-2 text-[14.5px] opacity-85">{banner.text}</p>}
           {banner.cta && <span className={cx(tone.btn, "btn-sm mt-4")}>{banner.cta}<ArrowRight size={15} /></span>}
         </div>
       </Link>

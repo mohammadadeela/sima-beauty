@@ -19,7 +19,9 @@ export function ProductVisual({ image, art, color, className, artClass }: { imag
       {photo ? (
         <img src={photo} alt="" loading="lazy" onError={() => setBroken(photo)} className="h-full w-full object-cover" />
       ) : (
-        <ProductArt kind={art} color={color} className={cx("absolute inset-0 m-auto h-[78%] w-auto drop-shadow-[0_14px_18px_rgba(38,16,28,.18)]", artClass)} />
+        <span className="absolute inset-0 flex items-center justify-center">
+          <ProductArt kind={art} color={color} className={cx("h-[80%] drop-shadow-[0_14px_18px_rgba(38,16,28,.18)]", artClass)} />
+        </span>
       )}
     </div>
   );

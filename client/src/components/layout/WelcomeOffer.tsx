@@ -51,7 +51,7 @@ export function WelcomeOffer() {
       <div className="grid sm:grid-cols-[260px_1fr]">
         <div className="relative hidden overflow-hidden bg-gradient-to-br from-pink to-pink-deep sm:block">
           <Logo tone="light" tagline={false} className="absolute left-6 top-6 text-[3rem]" />
-          <ProductArt kind="lipstick" color="#FFD0E2" className="absolute bottom-[-6%] left-1/2 h-[82%] -translate-x-1/2 rotate-[10deg] animate-floaty drop-shadow-2xl" />
+          <ProductArt kind="lipstick" color="#FFD0E2" className="absolute bottom-[-6%] left-1/2 h-[82%] -translate-x-1/2 rotate-[10deg] drop-shadow-2xl" />
         </div>
         <div className="p-7 sm:p-9">
           {welcomeCode ? (

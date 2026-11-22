@@ -88,6 +88,11 @@ export interface HeroShade { name: string; hex: string }
 export interface Settings {
   storeName: string;
   currency: string;
+  // search engines
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
+  googleVerification: string;
   // announcement bar
   announcementOn: boolean;
   announcements: string[];

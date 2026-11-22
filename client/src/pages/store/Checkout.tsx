@@ -163,7 +163,7 @@ export default function Checkout() {
 
           {error && <p role="alert" className="mt-3 rounded-2xl bg-pink/10 px-4 py-3 text-[14px] font-medium text-pink-deep">{error.message}</p>}
           <button className="btn-pink mt-4 h-14 w-full text-[16.5px]" disabled={busy}>{busy ? <Spinner /> : <><Lock size={17} />Place order</>}</button>
-          <p className="mt-3 text-center text-[12.5px] text-ink-mute">By ordering you agree to our <Link href="/help/terms" className="underline">terms</Link> and <Link href="/help/delivery" className="underline">exchange policy</Link>.</p>
+          <p className="mt-3 text-center text-[12.5px] text-ink-mute">By ordering you agree to our <Link href="/help/policies" className="underline">terms</Link> and <Link href="/help/delivery" className="underline">exchange policy</Link>.</p>
         </div>
       </aside>
     </form>

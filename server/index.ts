@@ -12,6 +12,7 @@ import { store } from "./routes/store";
 import { account } from "./routes/account";
 import { admin, UPLOAD_DIR } from "./routes/admin";
 import { seedDemo } from "./seed";
+import { renderPage } from "./seo";
 
 const isProd = process.env.NODE_ENV === "production";
 const PORT = Number(process.env.PORT || 5001);
@@ -80,7 +81,7 @@ async function main() {
   app.use("/api", (_req, res) => res.status(404).json({ message: "Not found." }));
 
   app.get("/robots.txt", (_req, res) => {
-    res.type("text/plain").send(`User-agent: *\nDisallow: /admin\nDisallow: /checkout\nDisallow: /account\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+    res.type("text/plain").send(`User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /checkout\nDisallow: /account\nDisallow: /order/\nSitemap: ${SITE_URL}/sitemap.xml\n`);
   });
   app.get("/sitemap.xml", async (_req, res) => {
     const [products, categories, brands] = await Promise.all([
@@ -89,29 +90,32 @@ async function main() {
       q<{ slug: string }>("SELECT slug FROM brands WHERE is_active"),
     ]);
     const urls = [
-      "/", "/shop", "/brands", "/offers", "/help",
+      "/", "/shop", "/brands", "/offers", "/help/delivery", "/help/faq", "/help/contact",
       ...categories.map((c) => `/shop?category=${c.slug}`),
       ...brands.map((b) => `/shop?brand=${b.slug}`),
       ...products.map((p) => `/product/${p.slug}`),
     ];
     res.type("application/xml").send(
       `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-        urls.map((u) => `  <url><loc>${SITE_URL}${u.replace(/&/g, "&amp;")}</loc></url>`).join("\n") + `\n</urlset>\n`,
+        urls.map((u) => `  <url><loc>${SITE_URL}${u.replace(/&/g, "&amp;")}</loc><changefreq>${u.startsWith("/product/") ? "weekly" : "daily"}</changefreq><priority>${u === "/" ? "1.0" : u.startsWith("/product/") ? "0.8" : "0.6"}</priority></url>`).join("\n") + `\n</urlset>\n`,
     );
   });
 
   if (isProd) {
     const publicDir = path.resolve(import.meta.dirname, "public");
     if (!fs.existsSync(publicDir)) throw new Error(`Build not found at ${publicDir}. Run "npm run build" first.`);
+    const template = fs.readFileSync(path.join(publicDir, "index.html"), "utf8");
     app.use(express.static(publicDir, {
+      index: false,
       setHeaders(res, file) {
         // Hashed assets never change; index.html must always be fresh.
         res.setHeader("Cache-Control", file.includes(`${path.sep}assets${path.sep}`) ? "public, max-age=31536000, immutable" : "no-cache");
       },
     }));
-    app.get("/{*path}", (_req, res) => {
-      res.setHeader("Cache-Control", "no-cache");
-      res.sendFile(path.join(publicDir, "index.html"));
+    // Every page gets its own title, description and structured data for Google.
+    app.get("/{*path}", async (req, res) => {
+      const { html, status } = await renderPage(template, req, SITE_URL);
+      res.status(status).setHeader("Cache-Control", "no-cache").type("html").send(html);
     });
   } else {
     const { createServer } = await import("vite");

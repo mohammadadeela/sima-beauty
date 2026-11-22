@@ -1,7 +1,7 @@
 # Sima Beauty
 
 Online makeup store: a customer storefront and an admin panel in one app.
-English only, cash on delivery, built to run on a VPS next to Lucerne Boutique.
+English, cash on delivery, built to run on a VPS next to Lucerne Boutique.
 
 ## What is inside
 
@@ -208,5 +208,29 @@ tar czf sima-uploads.tgz uploads                        # product photos
 - **Sample catalogue and demo database.** 36 fictional products across eight categories, 30 fake orders, 8 test customers, 18 sample reviews, three coupon codes, and fictional subscriber/messages. Prices and stock are placeholders. Replace everything before going live.
 - **Product illustrations.** A product without a photo shows a drawn illustration tinted with its shade colour. Upload a photo and it takes over.
 - **Payment.** Cash on delivery only. A card gateway can be added later in `server/routes/store.ts`.
-- **Fonts** load from Google Fonts (Bodoni Moda and Figtree).
+- **Fonts** load from Google Fonts (Bodoni Moda, Figtree, and Tajawal for Arabic).
+- **Language.** The whole store and the admin panel are in English. Arabic typed into the admin panel (product names, policies) still displays correctly.
+- **3D.** The hero lipstick, the powder compact and the mascara are live 3D (`client/src/components/three`). The product pictures used when a product has no photo are renders of the same 3D models, stored in `client/public/art`. To change them, edit `models.ts`, run `npm run dev`, then `node script/render-art.mjs` on a computer with Chrome and Playwright.
 - **Prices are always calculated on the server** (`server/pricing.ts`), so a customer can never be charged a different total from the one shown.
+
+## Getting found on Google (SEO)
+
+The site already does the technical part: every product, category and brand page has its own title,
+description, canonical address, share picture and structured data (price, stock, rating), plus
+`/sitemap.xml` and `/robots.txt`. No one can promise first place on Google, but these steps are what
+move a new store up, in order of impact:
+
+1. **Search Console.** Open https://search.google.com/search-console, add your domain, choose "HTML tag",
+   and paste the code into Admin → Store settings → Google Search Console code. Then submit
+   `https://your-domain.com/sitemap.xml` under Sitemaps.
+2. **Google Business Profile.** Create a profile for the shop (name, city, phone, photos, website).
+   This is what puts the store on the map and at the top for searches like "makeup near me".
+3. **Real content.** Upload real product photos and write two or three honest lines for each product
+   using the words customers search for (matte lipstick, waterproof mascara…). Pages with real
+   photos and text rank; empty ones don't.
+4. **Title and search words.** Set them in Admin → Store settings. Put your city in the title if you
+   mainly sell locally, for example "Original makeup in Ramallah".
+5. **Links.** Put the website link in the Instagram and Facebook bios, and ask customers for reviews
+   on the product pages and on Google.
+
+Expect new pages to appear within days and positions to improve over weeks, not hours.
