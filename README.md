@@ -91,6 +91,16 @@ The tables are created automatically the first time the app starts.
 These steps assume the VPS already runs Lucerne (Node, PM2, nginx and PostgreSQL are installed).
 Sima runs as a second app on port **5001** with its own database, so the two stores never touch each other.
 
+### One-command IP-based demo deployment (no domain required)
+
+On your **Hostinger Ubuntu VPS** terminal (root/sudo access), paste:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mohammadadeela/sima-beauty/main/deploy/install-vps.sh | sudo bash
+```
+
+The script installs isolated Node 22 (does not replace Lucerne Node), PostgreSQL, test data, a systemd service, and a dedicated Nginx IP site. It prints the store/admin HTTP links and a randomly generated admin password at the end; the login is also saved in `/root/sima-beauty-login.txt` (read with `sudo cat /root/sima-beauty-login.txt`). It only seeds an initially empty Sima database and safely reuses the existing database on later runs. Never run real transactions or use real customer information while testing over **HTTP**. Buy/connect a domain and configure **HTTPS** before going live for real customers. A Hostinger-managed firewall may need port 80 enabled in hPanel. To update later, run the same command again.
+
 ### 1. Upload the code
 
 Easiest is a GitHub repo, the same way as Lucerne:
@@ -135,7 +145,7 @@ Fill in:
 - `SESSION_SECRET` with the output of `openssl rand -hex 32`
 - `SITE_URL` with your real address, for example `https://www.simabeauty.com`
 - `ADMIN_EMAIL` and `ADMIN_PASSWORD`: your admin sign-in (8+ characters)
-- `SEED_DEMO=true` to create the complete **fictional test database** on a **new, empty database** (36 products across 8 categories, 8 brands, 8 customers, 30 orders, 18 reviews, 5 subscribers, 4 messages, and 3 coupons). Nothing real is contacted.
+- `SEED_DEMO=true` if you want the sample products on the first start
 
 ### 4. Install, build, start
 
@@ -169,7 +179,7 @@ Then:
 
 1. **Store settings**: add your WhatsApp number, phone and address.
 2. **Products**: replace the sample products with yours and upload real photos.
-3. Set `SEED_DEMO=false` in `.env` after seeding. **This stops future seeding but does not delete any test data.** For launch, use a separate, clean production database; never mix demo orders with real customers.
+3. Set `SEED_DEMO=false` in `.env` so samples are never added again.
 
 ### Updating later
 
@@ -191,7 +201,7 @@ tar czf sima-uploads.tgz uploads                        # product photos
 
 ## Good to know
 
-- **Fictional demo database.** Set `SEED_DEMO=true` in `.env` for the first start against an empty PostgreSQL database. Seeded products, customers, order history, statuses, discounts, ratings, subscribers and messages help test the store and admin dashboard. Demo customer email addresses use the reserved `.invalid` suffix and all passwords are disabled. Orders start `SB-DEMO-` and are marked as test orders. Nothing is actually paid for or shipped. The seed only runs if there are no products. **Do not enable or reuse these data in a live store.**
+- **Sample catalogue and demo database.** 36 fictional products across eight categories, 30 fake orders, 8 test customers, 18 sample reviews, three coupon codes, and fictional subscriber/messages. Prices and stock are placeholders. Replace everything before going live.
 - **Product illustrations.** A product without a photo shows a drawn illustration tinted with its shade colour. Upload a photo and it takes over.
 - **Payment.** Cash on delivery only. A card gateway can be added later in `server/routes/store.ts`.
 - **Fonts** load from Google Fonts (Bodoni Moda and Figtree).

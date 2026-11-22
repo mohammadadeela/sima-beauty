@@ -15,6 +15,7 @@ import { seedDemo } from "./seed";
 
 const isProd = process.env.NODE_ENV === "production";
 const PORT = Number(process.env.PORT || 5001);
+const HOST = process.env.HOST || (isProd ? "127.0.0.1" : "0.0.0.0");
 const SITE_URL = (process.env.SITE_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
 
 async function main() {
@@ -134,7 +135,7 @@ async function main() {
     res.status(500).json({ message: "Something went wrong on our side. Please try again." });
   });
 
-  app.listen(PORT, "0.0.0.0", () => console.log(`Sima Beauty is running on port ${PORT} (${isProd ? "production" : "development"})`));
+  app.listen(PORT, HOST, () => console.log(`Sima Beauty is running on ${HOST}:${PORT} (${isProd ? "production" : "development"})`));
 }
 
 main().catch((err) => {

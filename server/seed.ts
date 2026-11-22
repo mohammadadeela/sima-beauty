@@ -2,10 +2,11 @@ import type { ArtKind } from "@shared/types";
 import { one, pool, tx } from "./db";
 import { slugify } from "./catalog";
 import { saveSettings } from "./settings";
+import { hashPassword } from "./auth";
+import { randomBytes } from "crypto";
 
-// Opt-in demo dataset for a FRESH, EMPTY database only (SEED_DEMO=true).
-// Products, orders, customers and messages below are fictional test fixtures.
-// Never use this seed in a database that will hold real customer transactions.
+// A sample catalogue so the store looks alive on day one.
+// It only runs when the products table is empty. Replace it from the admin panel.
 
 type S = [name: string, hex: string, family: string];
 const LIP: S[] = [
@@ -38,8 +39,8 @@ const CATEGORIES: { name: string; color: string; art: ArtKind }[] = [
   { name: "Cheeks", color: "#FFC9C2", art: "compact" },
   { name: "Nails", color: "#FFA6C9", art: "polish" },
   { name: "Brushes", color: "#F6DDF0", art: "brush" },
-  { name: "Skincare", color: "#E4EAD6", art: "foundation" },
-  { name: "Accessories", color: "#DDE6FA", art: "brush" },
+  { name: "Skincare", color: "#E6EAD7", art: "foundation" },
+  { name: "Tools", color: "#E3DAF1", art: "brush" },
 ];
 
 const PRODUCTS: P[] = [
@@ -76,14 +77,14 @@ const PRODUCTS: P[] = [
 
   { name: "Powder Brush", brand: "Flormar", cat: "Brushes", art: "brush", price: 34, desc: "Large, fluffy brush for powder and bronzer." },
   { name: "Blending Brush", brand: "Catrice", cat: "Brushes", art: "brush", price: 22, flags: "n", desc: "Tapered brush that blends eyeshadow seamlessly." },
-  { name: "Hydrating Face Serum", brand: "Catrice", cat: "Skincare", art: "foundation", price: 65, sale: 54, flags: "fn", desc: "Lightweight hydration serum for a fresh, dewy finish." },
-  { name: "Daily Moisturizing Cream", brand: "L'Oréal Paris", cat: "Skincare", art: "foundation", price: 72, flags: "f", desc: "Comforting daily moisturizer for soft and smooth skin." },
-  { name: "Gentle Cleansing Gel", brand: "Essence", cat: "Skincare", art: "foundation", price: 34, desc: "A mild cleanser for washing away everyday impurities." },
-  { name: "Glow Face Mist", brand: "NYX", cat: "Skincare", art: "gloss", price: 46, sale: 39, flags: "n", desc: "Refreshing spray for a soft, hydrated look." },
-  { name: "Makeup Sponge Set", brand: "Flormar", cat: "Accessories", art: "compact", price: 26, flags: "n", desc: "A set of soft makeup sponges for smooth blending." },
-  { name: "Lash Curler", brand: "Golden Rose", cat: "Accessories", art: "brush", price: 29, desc: "Comfortable grip lash curler for lifted-looking lashes." },
-  { name: "Travel Makeup Brush Kit", brand: "Rimmel", cat: "Accessories", art: "brush", price: 67, sale: 56, flags: "f", desc: "Compact brushes for makeup on the go." },
-  { name: "Makeup Organizer Pouch", brand: "Maybelline", cat: "Accessories", art: "compact", price: 48, desc: "A convenient pouch for brushes and everyday beauty essentials." },
+  { name: "Hydrating Face Serum", brand: "L'Oréal Paris", cat: "Skincare", art: "foundation", price: 79, flags: "fn", desc: "Lightweight hydrating face serum for everyday skincare routines." },
+  { name: "Daily Moisture Cream", brand: "Catrice", cat: "Skincare", art: "compact", price: 54, sale: 44, flags: "f", desc: "Soft everyday moisture cream with a comforting finish." },
+  { name: "Gentle Cleansing Gel", brand: "Essence", cat: "Skincare", art: "foundation", price: 39, desc: "A gentle gel cleanser for a fresh-feeling face." },
+  { name: "Glow Face Mist", brand: "Flormar", cat: "Skincare", art: "gloss", price: 42, flags: "n", desc: "Refreshing mist that adds a dewy glow to your daily routine." },
+  { name: "Makeup Sponge Set", brand: "Essence", cat: "Tools", art: "compact", price: 25, flags: "f", desc: "A soft blending sponge set for smooth, even application." },
+  { name: "Precision Brush Set", brand: "Flormar", cat: "Tools", art: "brush", price: 89, sale: 72, flags: "f", desc: "Five versatile brushes for eyes, cheeks, and face makeup." },
+  { name: "Eyelash Curler", brand: "Rimmel", cat: "Tools", art: "liner", price: 29, desc: "A comfortable eyelash curler for a lifted lash look." },
+  { name: "Compact Makeup Mirror", brand: "Golden Rose", cat: "Tools", art: "compact", price: 35, flags: "n", desc: "A travel-friendly mirror for quick makeup touchups." },
 ];
 
 export async function seedDemo() {
@@ -100,8 +101,6 @@ export async function seedDemo() {
       const { rows } = await c.query("INSERT INTO categories (name, slug, color, art, sort_order) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name RETURNING id", [cat.name, slugify(cat.name), cat.color, cat.art, i]);
       catId[cat.name] = rows[0].id;
     }
-    const demoItems: { productId: number; shadeId: number; name: string; brand: string;
-      shadeName: string; shadeHex: string; art: ArtKind; price: number }[] = [];
     for (const [i, p] of PRODUCTS.entries()) {
       const flags = p.flags || "";
       const { rows } = await c.query(
@@ -116,87 +115,96 @@ export async function seedDemo() {
       for (const [n, s] of shades.entries()) {
         // A few low-stock and sold-out shades so every state of the store can be seen.
         const stock = n === 3 && i % 4 === 0 ? 0 : n === 1 && i % 3 === 0 ? 2 : 12 + ((i * 7 + n * 5) % 20);
-        const inserted = await c.query("INSERT INTO shades (product_id, name, hex, family, stock, sort_order) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id", [rows[0].id, s[0], s[1], s[2], stock, n]);
-        if (n === 0) demoItems.push({ productId: rows[0].id, shadeId: inserted.rows[0].id,
-          name: p.name, brand: p.brand, shadeName: s[0], shadeHex: s[1], art: p.art, price: p.sale ?? p.price });
+        await c.query("INSERT INTO shades (product_id, name, hex, family, stock, sort_order) VALUES ($1,$2,$3,$4,$5,$6)", [rows[0].id, s[0], s[1], s[2], stock, n]);
       }
     }
     await c.query("INSERT INTO discount_codes (code, type, value) VALUES ('WELCOME10', 'percent', 10) ON CONFLICT (code) DO NOTHING");
-    await c.query("INSERT INTO discount_codes (code, type, value, min_subtotal) VALUES ('DEMO15', 'percent', 15, 100), ('DEMO5', 'fixed', 5, 30) ON CONFLICT (code) DO NOTHING");
+    await c.query("INSERT INTO discount_codes (code, type, value) VALUES ('BEAUTY15', 'percent', 15) ON CONFLICT (code) DO NOTHING");
+    await c.query("INSERT INTO discount_codes (code, type, value, min_subtotal) VALUES ('GLOW20', 'fixed', 20, 150) ON CONFLICT (code) DO NOTHING");
 
-    // Synthetic customers have invalid password hashes; they cannot log in.
-    // The .invalid email domain and zero-only numbers cannot reach real people.
-    const customers: { id: number; name: string; email: string }[] = [];
-    for (let n = 1; n <= 8; n++) {
-      const name = `Demo Customer ${String(n).padStart(2, "0")}`;
-      const email = `customer${n}@sima-demo.invalid`;
+    // Fictional-only records for testing the admin dashboard. No real customer data.
+    const placeholderHash = await hashPassword(randomBytes(32).toString("hex"));
+    const customers: { id: number; name: string; email: string; phone: string }[] = [];
+    for (let i = 1; i <= 8; i++) {
+      const name = `Demo Customer ${i}`;
+      const email = `demo-customer-${i}@example.invalid`;
+      const phone = `0000000${String(i).padStart(3, "0")}`;
       const { rows } = await c.query(
         `INSERT INTO users (name, email, phone, password_hash, role, created_at)
-         VALUES ($1,$2,'0000000000','!demo-no-login!','customer', now() - ($3 || ' days')::interval)
-         RETURNING id`, [name, email, String(n * 4)]);
-      customers.push({ id: rows[0].id, name, email });
+         VALUES ($1,$2,$3,$4,'customer',now() - ($5 || ' days')::interval) RETURNING id`,
+        [name, email, phone, placeholderHash, String(i)],
+      );
+      customers.push({ id: rows[0].id, name, email, phone });
     }
-
-    const statuses = ["pending", "confirmed", "shipped", "delivered", "delivered", "cancelled"];
-    for (let n = 0; n < 30; n++) {
-      const customer = customers[n % customers.length];
-      const status = statuses[n % statuses.length];
-      const itemCount = 1 + (n % 3);
-      const lines = Array.from({ length: itemCount }, (_, j) => ({
-        product: demoItems[(n * 5 + j * 9) % demoItems.length], qty: 1 + ((n + j) % 2),
-      }));
-      const subtotal = lines.reduce((sum, l) => sum + l.product.price * l.qty, 0);
-      const shipping = n % 4 === 0 ? 0 : 15;
-      const bundleDiscount = itemCount === 3 ? Math.round(subtotal * 0.1 * 100) / 100 : 0;
-      const total = Math.round((subtotal - bundleDiscount + shipping) * 100) / 100;
-      const createdHoursAgo = n === 0 ? 1 : n * 22;
+    const { rows: catalog } = await c.query(
+      `SELECT p.id, p.name, p.art, p.price, p.sale_price, b.name AS brand_name,
+              s.id AS shade_id, s.name AS shade_name, s.hex AS shade_hex
+         FROM products p LEFT JOIN brands b ON b.id = p.brand_id
+         JOIN LATERAL (SELECT id, name, hex FROM shades WHERE product_id=p.id ORDER BY id LIMIT 1) s ON TRUE
+         ORDER BY p.id`,
+    );
+    const statuses = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+    const areas = ["Ramallah", "Al-Bireh", "Nablus", "Hebron", "Bethlehem", "Jenin"];
+    for (let i = 1; i <= 30; i++) {
+      const customer = customers[(i - 1) % customers.length];
+      const status = statuses[i % statuses.length];
+      const item1 = catalog[(i * 3) % catalog.length];
+      const item2 = catalog[(i * 7 + 1) % catalog.length];
+      const price1 = Number(item1.sale_price ?? item1.price);
+      const price2 = Number(item2.sale_price ?? item2.price);
+      const qty1 = 1 + (i % 3 === 0 ? 1 : 0);
+      const qty2 = 1;
+      const subtotal = price1 * qty1 + price2 * qty2;
+      const shipping = i % 4 === 0 ? 30 : 20;
       const { rows } = await c.query(
-        `INSERT INTO orders (order_number, user_id, customer_name, phone, email, city, address,
-           notes, zone_name, subtotal, bundle_discount, shipping, total, status, admin_note, created_at)
-         VALUES ($1,$2,$3,'0000000000',$4,'Demo City','Demo Address — not for delivery',
-           'FAKE TEST ORDER','Demo Shipping Zone',$5,$6,$7,$8,$9,'[DEMO] Fictional order for UI testing',
-           now() - ($10 || ' hours')::interval) RETURNING id`,
-        [`SB-DEMO-${String(n + 1).padStart(4, "0")}`, customer.id, customer.name,
-         customer.email, subtotal, bundleDiscount, shipping, total, status, String(createdHoursAgo)]);
-      for (const { product, qty } of lines) {
+        `INSERT INTO orders (order_number, user_id, customer_name, phone, email, city, address, zone_name,
+           subtotal, shipping, total, status, admin_note, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now() - ($14 || ' hours')::interval)
+         RETURNING id`,
+        [`SB-DEMO-${String(i).padStart(4, "0")}`, customer.id, customer.name, customer.phone,
+         customer.email, areas[i % areas.length], "Demo address — not a real delivery", "West Bank",
+         subtotal, shipping, subtotal + shipping, status, "TEST DATA — do not dispatch", String(i * 8)],
+      );
+      const orderId = rows[0].id;
+      for (const [product, price, qty] of [[item1, price1, qty1], [item2, price2, qty2]] as const) {
         await c.query(
-          `INSERT INTO order_items (order_id, product_id, shade_id, name, brand_name,
-             shade_name, shade_hex, art, price, qty)
+          `INSERT INTO order_items (order_id, product_id, shade_id, name, brand_name, shade_name, shade_hex, art, price, qty)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-          [rows[0].id, product.productId, product.shadeId, product.name, product.brand,
-           product.shadeName, product.shadeHex, product.art, product.price, qty]);
+          [orderId, product.id, product.shade_id, product.name, product.brand_name || "",
+           product.shade_name || "", product.shade_hex || "", product.art, price, qty],
+        );
         if (status !== "cancelled") {
-          await c.query("UPDATE shades SET stock = GREATEST(0, stock - $1) WHERE id = $2", [qty, product.shadeId]);
-          await c.query("UPDATE products SET sold_count = sold_count + $1 WHERE id = $2", [qty, product.productId]);
+          await c.query("UPDATE products SET sold_count = sold_count + $1 WHERE id = $2", [qty, product.id]);
         }
       }
     }
-
     const comments = [
-      "Demo: Lovely colour and smooth texture.", "Demo: Easy to use and blends well.",
-      "Demo: Great for testing this product page.", "Demo: Soft finish and nice packaging.",
-      "Demo: I would recommend this shade.", "Demo: Looks beautiful in daylight.",
+      "Lovely texture and shade selection.", "Great for everyday use.",
+      "Soft finish, works well for my routine.", "Good value for a test order.",
+      "The colour looks beautiful.", "Easy to apply and comfortable.",
     ];
-    for (let n = 0; n < 18; n++) {
-      const item = demoItems[(n * 3) % demoItems.length];
-      await c.query(`INSERT INTO reviews (product_id, name, rating, comment, is_approved, created_at)
-        VALUES ($1,$2,$3,$4,$5, now() - ($6 || ' days')::interval)`,
-        [item.productId, `Demo Reviewer ${n + 1}`, 3 + (n % 3), comments[n % comments.length], n % 5 !== 0, String(n)]);
+    for (let i = 0; i < 18; i++) {
+      const customer = customers[i % customers.length];
+      const product = catalog[(i * 2) % catalog.length];
+      await c.query(
+        `INSERT INTO reviews (product_id, user_id, name, rating, comment, is_approved, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,now() - ($7 || ' days')::interval)`,
+        [product.id, customer.id, customer.name, 3 + (i % 3), comments[i % comments.length], i % 5 !== 0, String(i)],
+      );
     }
-    for (let n = 1; n <= 5; n++) {
-      await c.query("INSERT INTO subscribers (contact, source) VALUES ($1,'demo') ON CONFLICT (contact) DO NOTHING",
-        [`subscriber${n}@sima-demo.invalid`]);
+    for (let i = 1; i <= 7; i++) {
+      await c.query("INSERT INTO subscribers (contact, source) VALUES ($1, 'demo') ON CONFLICT DO NOTHING",
+        [`demo-subscriber-${i}@example.invalid`]);
     }
-    for (let n = 1; n <= 4; n++) {
+    for (let i = 1; i <= 5; i++) {
       await c.query("INSERT INTO messages (name, contact, message, is_read) VALUES ($1,$2,$3,$4)",
-        [`Demo Visitor ${n}`, `visitor${n}@sima-demo.invalid`,
-         `Demo inquiry #${n}: Is this shade available? This is test data, not a real message.`, n % 2 === 0]);
+        [`Demo Contact ${i}`, `demo-message-${i}@example.invalid`, `This is a fictional test enquiry number ${i}.`, i % 2 === 0]);
     }
   });
   if (!(await one("SELECT key FROM settings WHERE key = 'dealEndsAt'"))) {
     await saveSettings({ dealEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() });
   }
-  console.log("[seed] Done: 36 products, 30 demo orders, 8 demo customers, 18 reviews, 5 subscribers, 4 messages.");
+  console.log("[seed] Done.");
 }
 
 // Allow "npm run seed" from the command line.
