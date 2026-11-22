@@ -34,8 +34,11 @@ MANAGED=0
 if [[ -d "$APP" && -f "$APP/$MARKER" ]]; then
   MANAGED=1
   [[ -d "$APP/.git" ]] && [[ -f "$APP/.env" ]] && [[ -f "$SERVICE" ]] || fail 'Incomplete Sima installation; will not overwrite files.'
-  [[ "$(git -C "$APP" remote get-url origin)" == "$REPO" ]] || fail 'Directory belongs to a different repository.'
   id "$WEB_USER" >/dev/null 2>&1 || fail 'Sima service user is missing.'
+  # The checkout is owned by simaweb; Git must run as that user.
+  # Running Git as root triggers "dubious ownership" and can make files root-owned.
+  ORIGIN="$(runuser -u "$WEB_USER" -- git -C "$APP" remote get-url origin)" || fail 'Cannot read Sima repository as simaweb.'
+  [[ "$ORIGIN" == "$REPO" ]] || fail 'Directory belongs to a different repository.'
   [[ -f "$CREDS" ]] || fail 'Sima credentials are missing; will not regenerate/overwrite secrets.'
 else
   [[ ! -e "$APP" && ! -L "$APP" ]] || fail "Directory $APP already exists, refusing to use/overwrite it."
@@ -106,9 +109,9 @@ LOGIN
   chmod 600 "$APP/.env"
 else
   echo '[Sima] Updating only the previously managed Sima install.'
-  [[ -z "$(git -C "$APP" status --porcelain --untracked-files=no)" ]] || fail 'Local Sima changes detected; not overwriting.'
-  git -C "$APP" fetch origin main
-  git -C "$APP" merge --ff-only FETCH_HEAD
+  [[ -z "$(runuser -u "$WEB_USER" -- git -C "$APP" status --porcelain --untracked-files=no)" ]] || fail 'Local Sima changes detected; not overwriting.'
+  runuser -u "$WEB_USER" -- git -C "$APP" fetch origin main
+  runuser -u "$WEB_USER" -- git -C "$APP" merge --ff-only FETCH_HEAD
   mkdir -p /var/cache/sima-beauty
   chown -R "$WEB_USER:$WEB_USER" /var/cache/sima-beauty
 fi
